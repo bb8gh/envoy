@@ -283,11 +283,21 @@ InstanceImpl::ThreadLocalPool::threadLocalActiveClient(Upstream::HostConstShared
     if (config_->connectionRateLimitEnabled() && rate_limiter->consume(1, false) == 0) {
       redis_cluster_stats_.connection_rate_limited_.inc();
     } else {
+      // Ensure the filter is not deleted in the main thread during this method.
+      auto shared_parent = parent_.lock();
+      ASSERT(shared_parent != nullptr);
+      ASSERT(cluster_ != nullptr);
+
+      const auto auth_username =
+          ProtocolOptionsConfigImpl::authUsername(cluster_->info(), shared_parent->api_, host);
+      const auto auth_password =
+          ProtocolOptionsConfigImpl::authPassword(cluster_->info(), shared_parent->api_, host);
+
       client = std::make_unique<ThreadLocalActiveClient>(*this);
       client->host_ = host;
       client->redis_client_ = client_factory_.create(
-          host, dispatcher_, config_, redis_command_stats_, *(stats_scope_), auth_username_,
-          auth_password_, false, aws_iam_config_, aws_iam_authenticator_);
+          host, dispatcher_, config_, redis_command_stats_, *(stats_scope_), auth_username,
+          auth_password, false, aws_iam_config_, aws_iam_authenticator_);
 
       client->redis_client_->addConnectionCallbacks(*client);
     }
@@ -331,7 +341,6 @@ InstanceImpl::ThreadLocalPool::makeRequest(const std::string& key, RespVariant&&
   Clusters::Redis::RedisLoadBalancerContextImpl lb_context(
       key, config_->enableHashtagging(), is_redis_cluster_, getRequest(request),
       transaction.active_ ? Common::Redis::Client::ReadPolicy::Primary : config_->readPolicy());
-
   Upstream::HostConstSharedPtr host = Upstream::LoadBalancer::onlyAllowSynchronousHostSelection(
       cluster_->loadBalancer().chooseHost(&lb_context));
   if (!host) {
@@ -448,9 +457,19 @@ InstanceImpl::ThreadLocalPool::makeRequestToHost(Upstream::HostConstSharedPtr& h
   uint32_t client_idx = transaction.current_client_idx_;
   // If there is an active transaction, establish a new connection if necessary.
   if (transaction.active_ && !transaction.connection_established_) {
+    // Ensure the filter is not deleted in the main thread during this method.
+    auto shared_parent = parent_.lock();
+    ASSERT(shared_parent != nullptr);
+    ASSERT(cluster_ != nullptr);
+
+    const auto auth_username =
+        ProtocolOptionsConfigImpl::authUsername(cluster_->info(), shared_parent->api_, host);
+    const auto auth_password =
+        ProtocolOptionsConfigImpl::authPassword(cluster_->info(), shared_parent->api_, host);
+
     transaction.clients_[client_idx] = client_factory_.create(
-        host, dispatcher_, config_, redis_command_stats_, *(stats_scope_), auth_username_,
-        auth_password_, true, aws_iam_config_, aws_iam_authenticator_);
+        host, dispatcher_, config_, redis_command_stats_, *(stats_scope_), auth_username,
+        auth_password, true, aws_iam_config_, aws_iam_authenticator_);
     if (transaction.connection_cb_) {
       transaction.clients_[client_idx]->addConnectionCallbacks(*transaction.connection_cb_);
     }
