@@ -106,6 +106,10 @@ public:
   MOCK_METHOD(Common::Redis::Client::PoolRequest*, makeRequestToShard_,
               (uint16_t shard_index, RespVariant& request, PoolCallbacks& callbacks));
   MOCK_METHOD(bool, onRedirection, ());
+  MOCK_METHOD(Upstream::HostConstSharedPtrVector, allHosts, (), (const));
+  MOCK_METHOD(Common::Redis::Client::PoolRequest*,
+  makeRequestToHost, (Upstream::HostConstSharedPtr& host, ConnPool::RespVariant&& request,
+                    ConnPool::PoolCallbacks& callbacks, Common::Redis::Client::Transaction& transaction));
 };
 } // namespace ConnPool
 

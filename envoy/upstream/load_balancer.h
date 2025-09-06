@@ -208,6 +208,11 @@ public:
   }
 
   /**
+   * Returns all the hosts that this load balancer can send requests to.
+   */
+  virtual HostConstSharedPtrVector allHosts() const { return {}; }
+
+  /**
    * Ask the load balancer for the next host to use depending on the underlying LB algorithm.
    * @param context supplies the load balancer context. Not all load balancers make use of all
    *        context information. Load balancers should be written to assume that context information

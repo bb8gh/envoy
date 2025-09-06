@@ -75,6 +75,19 @@ RingHashLoadBalancerStats RingHashLoadBalancer::generateStats(Stats::Scope& scop
   return {ALL_RING_HASH_LOAD_BALANCER_STATS(POOL_GAUGE(scope))};
 }
 
+HostConstSharedPtrVector RingHashLoadBalancer::Ring::allHosts() const {
+  if (ring_.empty()) {
+    return {nullptr};
+  }
+
+  absl::flat_hash_set<HostConstSharedPtr> unique_hosts;
+  for (const auto& entry : ring_) {
+    unique_hosts.insert(entry.host_);
+  }
+  HostConstSharedPtrVector hosts(unique_hosts.begin(), unique_hosts.end());
+  return hosts;
+}
+
 HostSelectionResponse RingHashLoadBalancer::Ring::chooseHost(uint64_t h, uint32_t attempt) const {
   if (ring_.empty()) {
     return {nullptr};

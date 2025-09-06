@@ -78,6 +78,10 @@ void InstanceImpl::init() {
       });
 }
 
+Upstream::HostConstSharedPtrVector InstanceImpl::allHosts() const {
+  return tls_->getTyped<ThreadLocalPool>().allHosts();
+}
+
 uint16_t InstanceImpl::shardSize() { return tls_->getTyped<ThreadLocalPool>().shardSize(); }
 
 // This method is always called from a InstanceSharedPtr we don't have to worry about tls_->getTyped
@@ -106,6 +110,16 @@ InstanceImpl::makeRequestToShard(uint16_t shard_index, RespVariant&& request,
                                  Common::Redis::Client::Transaction& transaction) {
   return tls_->getTyped<ThreadLocalPool>().makeRequestToShard(shard_index, std::move(request),
                                                               callbacks, transaction);
+}
+
+// This method is always called from a InstanceSharedPtr we don't have to worry about tls_->getTyped
+// failing due to InstanceImpl going away.
+Common::Redis::Client::PoolRequest*
+InstanceImpl::makeRequestToHost(Upstream::HostConstSharedPtr& host, RespVariant&& request,
+                                PoolCallbacks& callbacks,
+                                Common::Redis::Client::Transaction& transaction) {
+  return tls_->getTyped<ThreadLocalPool>().makeRequestToHost(host, std::move(request), callbacks,
+                                                             transaction);
 }
 
 InstanceImpl::ThreadLocalPool::ThreadLocalPool(
@@ -299,6 +313,18 @@ InstanceImpl::ThreadLocalPool::threadLocalActiveClient(Upstream::HostConstShared
   return client;
 }
 
+Upstream::HostConstSharedPtrVector InstanceImpl::ThreadLocalPool::allHosts() const {
+  if (cluster_ == nullptr) {
+    ASSERT(client_map_.empty());
+    ASSERT(host_set_member_update_cb_handle_ == nullptr);
+    return {};
+  }
+
+  Upstream::HostConstSharedPtrVector hosts = cluster_->loadBalancer().allHosts();
+  ENVOY_LOG(info, "num hosts found {}", hosts.size());
+  return hosts;
+}
+
 uint16_t InstanceImpl::ThreadLocalPool::shardSize() {
   if (cluster_ == nullptr) {
     ASSERT(client_map_.empty());
@@ -310,6 +336,7 @@ uint16_t InstanceImpl::ThreadLocalPool::shardSize() {
   absl::flat_hash_set<Upstream::HostConstSharedPtr> unique_hosts;
   unique_hosts.reserve(Envoy::Extensions::Clusters::Redis::MaxSlot);
   for (uint16_t size = 0; size < Envoy::Extensions::Clusters::Redis::MaxSlot; size++) {
+    // ENVOY_LOG(info, "finding hosts {}", size);
     Clusters::Redis::RedisSpecifyShardContextImpl lb_context(
         size, request, Common::Redis::Client::ReadPolicy::Primary);
     Upstream::HostConstSharedPtr host = Upstream::LoadBalancer::onlyAllowSynchronousHostSelection(
@@ -319,6 +346,7 @@ uint16_t InstanceImpl::ThreadLocalPool::shardSize() {
     }
     unique_hosts.insert(std::move(host));
   }
+  ENVOY_LOG(info, "num hosts found {}", unique_hosts.size());
   return static_cast<uint16_t>(unique_hosts.size());
 }
 

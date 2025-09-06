@@ -70,6 +70,7 @@ public:
       absl::optional<Common::Redis::AwsIamAuthenticator::AwsIamAuthenticatorSharedPtr>
           aws_iam_authenticator);
   uint16_t shardSize() override;
+  virtual Upstream::HostConstSharedPtrVector allHosts() const override;
   // RedisProxy::ConnPool::Instance
   Common::Redis::Client::PoolRequest*
   makeRequest(const std::string& key, RespVariant&& request, PoolCallbacks& callbacks,
@@ -77,6 +78,10 @@ public:
   Common::Redis::Client::PoolRequest*
   makeRequestToShard(uint16_t shard_index, RespVariant&& request, PoolCallbacks& callbacks,
                      Common::Redis::Client::Transaction& transaction) override;
+  Common::Redis::Client::PoolRequest*
+  makeRequestToHost(Upstream::HostConstSharedPtr& host, RespVariant&& request,
+                    PoolCallbacks& callbacks,
+                    Common::Redis::Client::Transaction& transaction) override;
   /**
    * Makes a redis request based on IP address and TCP port of the upstream host (e.g.,
    * moved/ask cluster redirection). This is now only kept mostly for testing.
@@ -162,6 +167,7 @@ private:
             aws_iam_authenticator);
     ~ThreadLocalPool() override;
     ThreadLocalActiveClientPtr& threadLocalActiveClient(Upstream::HostConstSharedPtr host);
+    Upstream::HostConstSharedPtrVector allHosts() const;
     uint16_t shardSize();
     Common::Redis::Client::PoolRequest*
     makeRequest(const std::string& key, RespVariant&& request, PoolCallbacks& callbacks,

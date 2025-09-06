@@ -27,6 +27,7 @@ namespace CommandSplitter {
 struct ResponseValues {
   const std::string OK = "OK";
   const std::string InvalidRequest = "invalid request";
+  const std::string InvalidSubcommand = "invalid subcommand";
   const std::string NoUpstreamHost = "no upstream host";
   const std::string UpstreamFailure = "upstream failure";
   const std::string UpstreamProtocolError = "upstream protocol error";
@@ -305,6 +306,30 @@ private:
 };
 
 /**
+ * ScriptRequest sends the command to all Redis server. The response from each Redis is merged
+ * and returned to the user. If there is any error or failure in processing the fragmented
+ * commands, an error will be returned.
+ */
+class ScriptRequest : public FragmentedRequest {
+public:
+  static SplitRequestPtr create(Router& router, Common::Redis::RespValuePtr&& incoming_request,
+                                SplitCallbacks& callbacks, CommandStats& command_stats,
+                                TimeSource& time_source, bool delay_command_latency,
+                                const StreamInfo::StreamInfo& stream_info);
+
+private:
+  ScriptRequest(SplitCallbacks& callbacks, CommandStats& command_stats, TimeSource& time_source,
+                bool delay_command_latency, const std::string& subcommand)
+      : FragmentedRequest(callbacks, command_stats, time_source, delay_command_latency),
+        subcommand_(subcommand) {}
+  // RedisProxy::CommandSplitter::FragmentedRequest
+  void onChildResponse(Common::Redis::RespValuePtr&& value, uint32_t index) override;
+
+  const std::string subcommand_;
+  std::vector<Common::Redis::RespValuePtr> responses_;
+};
+
+/**
  * ScanRequest is a specialized request for the SCAN command. It sends the command to all Redis
  * servers and merges the results. The SCAN command is used to incrementally iterate over keys in
  * the database, and it may return multiple pages of results. This request handles the pagination
@@ -495,6 +520,7 @@ private:
   CommandHandlerFactory<MGETRequest> mget_handler_;
   CommandHandlerFactory<MSETRequest> mset_handler_;
   CommandHandlerFactory<KeysRequest> keys_handler_;
+  CommandHandlerFactory<ScriptRequest> script_handler_;
   CommandHandlerFactory<ScanRequest> scan_handler_;
   CommandHandlerFactory<InfoRequest> info_handler_;
   CommandHandlerFactory<SelectRequest> select_handler_;

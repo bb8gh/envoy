@@ -43,7 +43,7 @@ public:
   RespValue(RespValue&& other) noexcept;            // move constructor
   RespValue& operator=(const RespValue& other);     // copy assignment
   RespValue& operator=(RespValue&& other) noexcept; // move assignment
-  bool operator==(const RespValue& other) const;    // test for equality, unit tests
+  bool operator==(const RespValue& other) const;    // test for equality
   bool operator!=(const RespValue& other) const { return !(*this == other); }
 
   /**

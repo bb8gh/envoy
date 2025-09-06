@@ -82,6 +82,7 @@ private:
          bool use_hostname_for_hashing, RingHashLoadBalancerStats& stats);
 
     // ThreadAwareLoadBalancerBase::HashingLoadBalancer
+    HostConstSharedPtrVector allHosts() const override;
     HostSelectionResponse chooseHost(uint64_t hash, uint32_t attempt) const override;
 
     std::vector<RingEntry> ring_;

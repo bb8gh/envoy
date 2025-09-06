@@ -52,6 +52,12 @@ class Instance {
 public:
   virtual ~Instance() = default;
 
+  /**
+   * Returns a list of all the hosts in this instance.
+   * @return HostConstSharedPtrVector a list of all the hosts in this instance
+   */
+  virtual Upstream::HostConstSharedPtrVector allHosts() const PURE;
+
   virtual uint16_t shardSize() PURE;
   /**
    * Makes a redis request.
@@ -77,6 +83,19 @@ public:
   virtual Common::Redis::Client::PoolRequest*
   makeRequestToShard(uint16_t shard_index, RespVariant&& request, PoolCallbacks& callbacks,
                      Common::Redis::Client::Transaction& transaction) PURE;
+
+  /**
+   * Makes a redis request to a specific host.
+   * @param host supplies the host to send the request to.
+   * @param request supplies the request to make.
+   * @param callbacks supplies the request completion callbacks.
+   * @param transaction supplies the transaction info of the current connection.
+   * @return PoolRequest* a handle to the active request or nullptr if the request could not be made
+   *         for some reason.
+   */
+  virtual Common::Redis::Client::PoolRequest*
+  makeRequestToHost(Upstream::HostConstSharedPtr& host, RespVariant&& request,
+                    PoolCallbacks& callbacks, Common::Redis::Client::Transaction& transaction) PURE;
 };
 
 using InstanceSharedPtr = std::shared_ptr<Instance>;

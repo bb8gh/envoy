@@ -36,6 +36,7 @@ public:
   class HashingLoadBalancer {
   public:
     virtual ~HashingLoadBalancer() = default;
+    virtual HostConstSharedPtrVector allHosts() const { return {}; }
     virtual HostSelectionResponse chooseHost(uint64_t hash, uint32_t attempt) const PURE;
     const absl::string_view hashKey(HostConstSharedPtr host, bool use_hostname) const {
       const Protobuf::Value& val = Config::Metadata::metadataValue(
@@ -132,6 +133,7 @@ private:
         : stats_(stats), random_(random), hash_policy_(std::move(hash_policy)) {}
 
     // Upstream::LoadBalancer
+    HostConstSharedPtrVector allHosts() const override;
     HostSelectionResponse chooseHost(LoadBalancerContext* context) override;
     // Preconnect not implemented for hash based load balancing
     HostConstSharedPtr peekAnotherHost(LoadBalancerContext*) override { return nullptr; }

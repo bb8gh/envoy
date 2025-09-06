@@ -58,6 +58,13 @@ struct SupportedCommands {
   }
 
   /**
+   * @return commands that are sent to all servers, who must respond identically
+   */
+  static const absl::flat_hash_set<std::string>& allShardsCommands() {
+    CONSTRUCT_ON_FIRST_USE(absl::flat_hash_set<std::string>, "script");
+  }
+
+  /**
    * @return commands which are sent to multiple servers and coalesced by summing the responses
    */
   static const absl::flat_hash_set<std::string>& hashMultipleSumResultCommands() {
@@ -96,6 +103,11 @@ struct SupportedCommands {
    * @return keys command
    */
   static const std::string& keys() { CONSTRUCT_ON_FIRST_USE(std::string, "keys"); }
+
+  /**
+   * @return script command
+   */
+  static const std::string& script() { CONSTRUCT_ON_FIRST_USE(std::string, "script"); }
 
   /**
    * @return ping command
@@ -146,7 +158,7 @@ struct SupportedCommands {
         "zpopmin", "zpopmax", "zrem", "zremrangebylex", "zremrangebyrank", "zremrangebyscore",
         "unlink", "copy", "rpoplpush", "smove", "sinterstore", "zunionstore", "zinterstore",
         "pfmerge", "georadius", "georadiusbymember", "rename", "sort", "sdiffstore", "msetnx",
-        "zrangestore", "sunionstore", "geosearchstore", "zdiffstore", "bitop", "renamenx");
+        "zrangestore", "sunionstore", "geosearchstore", "zdiffstore", "bitop", "renamenx", "script");
   }
 
   static bool isReadCommand(const std::string& command) {

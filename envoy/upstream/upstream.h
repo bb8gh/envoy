@@ -303,6 +303,7 @@ public:
 };
 
 using HostConstSharedPtr = std::shared_ptr<const Host>;
+using HostConstSharedPtrVector = std::vector<HostConstSharedPtr>;
 
 using HostVector = std::vector<HostSharedPtr>;
 using HealthyHostVector = Phantom<HostVector, Healthy>;

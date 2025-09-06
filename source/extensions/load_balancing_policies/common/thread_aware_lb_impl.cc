@@ -178,6 +178,24 @@ absl::Status ThreadAwareLoadBalancerBase::refresh() {
   return absl::OkStatus();
 }
 
+HostConstSharedPtrVector ThreadAwareLoadBalancerBase::LoadBalancerImpl::allHosts() const {
+  // Make sure we correctly return nullptr for any early allHosts() calls.
+  if (per_priority_state_ == nullptr) {
+    return {nullptr};
+  }
+
+  const uint32_t priority =
+      LoadBalancerBase::choosePriority(random_.random(), *healthy_per_priority_load_,
+                                       *degraded_per_priority_load_)
+          .first;
+  const auto& per_priority_state = (*per_priority_state_)[priority];
+  if (per_priority_state->global_panic_) {
+    stats_.lb_healthy_panic_.inc();
+  }
+
+  return per_priority_state->current_lb_->allHosts();
+}
+
 HostSelectionResponse
 ThreadAwareLoadBalancerBase::LoadBalancerImpl::chooseHost(LoadBalancerContext* context) {
   // Make sure we correctly return nullptr for any early chooseHost() calls.

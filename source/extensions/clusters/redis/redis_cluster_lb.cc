@@ -229,6 +229,13 @@ RedisSpecifyShardContextImpl::RedisSpecifyShardContextImpl(
     uint64_t shard_index, const NetworkFilters::Common::Redis::RespValue& request,
     NetworkFilters::Common::Redis::Client::ReadPolicy read_policy)
     : RedisLoadBalancerContextImpl(std::to_string(shard_index), true, true, request, read_policy),
+      // NOTE: There is a bug here, the index is not actually used correctly. It's used as a hash
+      // key, and results in all requests going to the same shard (at least, when having 2 shards
+      // total). It also results in shardSize() calls returning 1 even when there are multiple
+      // shards. At least the INFO command uses this and will break if this is fixed... because it
+      // will return a response that is no longer a valid redis response. Something really needs to
+      // be done to fix this
+      // shard_index_(MurmurHash::murmurHash2(absl::StrCat(shard_index))) {}
       shard_index_(shard_index) {}
 
 } // namespace Redis
